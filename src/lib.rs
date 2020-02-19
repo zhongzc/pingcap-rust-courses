@@ -1,8 +1,9 @@
 //#![deny(missing_docs)]
 //! An In-memory Key/Value Store
 
-pub mod err;
-pub mod kvs;
+#[macro_use]
+extern crate log;
 
-pub use crate::kvs::KvStore;
-pub use crate::err::Result;
+pub mod engine;
+pub mod err;
+pub mod network;
