@@ -25,7 +25,7 @@ fn write_bench(c: &mut Criterion) {
 
     group.bench_function(BenchmarkId::new("kvs_write", 1), |b| {
         let temp_dir = TempDir::new().unwrap();
-        let mut store = KvStore::open(temp_dir.path()).unwrap();
+        let store = KvStore::open(temp_dir.path()).unwrap();
         let mut i = 0;
         b.iter(|| {
             let kv = *&input.get(i).unwrap();
@@ -38,7 +38,7 @@ fn write_bench(c: &mut Criterion) {
     });
     group.bench_function(BenchmarkId::new("sled_write", 1), |b| {
         let temp_dir = TempDir::new().unwrap();
-        let mut store = SledStore::open(temp_dir.path()).unwrap();
+        let store = SledStore::open(temp_dir.path()).unwrap();
         let mut i = 0;
         b.iter(|| {
             let kv = *&input.get(i).unwrap();
@@ -75,9 +75,9 @@ fn read_bench(c: &mut Criterion) {
         })
         .collect();
 
-    group.bench_function(BenchmarkId::new("kvs_read", 10), |b| {
+    group.bench_function(BenchmarkId::new("kvs_read", 100), |b| {
         let temp_dir = TempDir::new().unwrap();
-        let mut store = KvStore::open(temp_dir.path()).unwrap();
+        let store = KvStore::open(temp_dir.path()).unwrap();
         let mut i = 0;
 
         for (k, v) in &input {
@@ -85,7 +85,7 @@ fn read_bench(c: &mut Criterion) {
         }
 
         b.iter(|| {
-            for _ in 0..10 {
+            for _ in 0..100 {
                 let k = *&read_iter.get(i).unwrap();
                 &store.get(k.clone());
                 i += 1;
@@ -96,9 +96,9 @@ fn read_bench(c: &mut Criterion) {
         })
     });
 
-    group.bench_function(BenchmarkId::new("sled_read", 10), |b| {
+    group.bench_function(BenchmarkId::new("sled_read", 100), |b| {
         let temp_dir = TempDir::new().unwrap();
-        let mut store = SledStore::open(temp_dir.path()).unwrap();
+        let store = SledStore::open(temp_dir.path()).unwrap();
         let mut i = 0;
 
         for (k, v) in &input {
@@ -106,7 +106,7 @@ fn read_bench(c: &mut Criterion) {
         }
 
         b.iter(|| {
-            for _ in 0..10 {
+            for _ in 0..100 {
                 let k = *&read_iter.get(i).unwrap();
                 &store.get(k.clone());
                 i += 1;

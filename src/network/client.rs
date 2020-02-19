@@ -1,6 +1,5 @@
 use crate::err::Result;
 use crate::network::{Request, Response};
-use std::io::prelude::*;
 use std::net::{Shutdown, SocketAddr, TcpStream};
 
 pub struct KvsClient {
@@ -18,9 +17,7 @@ impl KvsClient {
         serde_json::to_writer(&self.tcp_stream, req)?;
         self.tcp_stream.shutdown(Shutdown::Write)?;
 
-        let mut s = String::new();
-        self.tcp_stream.read_to_string(&mut s)?;
-        let resp: Response = serde_json::from_str(&s)?;
+        let resp: Response = serde_json::from_reader(&self.tcp_stream)?;
         Ok(resp)
     }
 }

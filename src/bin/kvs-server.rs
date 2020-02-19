@@ -1,8 +1,9 @@
 use byteorder::{ReadBytesExt, WriteBytesExt};
 use env_logger::{Builder, Target};
-use kvs::engine::{KvStore, KvsEngine, SledStore};
+use kvs::engine::{KvStore, SledStore};
 use kvs::err::{ParseError, Result, ServerNotMatch};
 use kvs::network::server::KvsServer;
+use kvs::thread_pool::{NaiveThreadPool, ThreadPool};
 use log::LevelFilter;
 use log::{error, info};
 use std::env::current_dir;
@@ -51,7 +52,12 @@ struct Command {
     engine: Engine,
 }
 
-fn get_engine(command: &Command) -> Result<Box<dyn KvsEngine>> {
+enum EngineImpl {
+    Kvs(KvStore),
+    Sled(SledStore),
+}
+
+fn get_engine(command: &Command) -> Result<EngineImpl> {
     let mut file = OpenOptions::new()
         .create(true)
         .read(true)
@@ -66,11 +72,11 @@ fn get_engine(command: &Command) -> Result<Box<dyn KvsEngine>> {
     match &command.engine {
         Engine::Kvs if [0u8, 1u8].contains(&opt_tag) => {
             file.write_u8(1u8)?;
-            Ok(Box::new(KvStore::open(current_dir()?)?))
+            Ok(EngineImpl::Kvs(KvStore::open(current_dir()?)?))
         }
         Engine::Sled if [0u8, 2u8].contains(&opt_tag) => {
             file.write_u8(2u8)?;
-            Ok(Box::new(SledStore::open(current_dir()?)?))
+            Ok(EngineImpl::Sled(SledStore::open(current_dir()?)?))
         }
         _ => Err(Box::new(ServerNotMatch)),
     }
@@ -82,7 +88,7 @@ fn main() -> Result<()> {
     // init logger
     Builder::from_default_env()
         .target(Target::Stderr)
-        .filter_level(LevelFilter::Debug)
+        .filter_level(LevelFilter::Info)
         .init();
 
     let engine = match get_engine(&opt) {
@@ -100,5 +106,9 @@ fn main() -> Result<()> {
     );
     info!("server is listening to {}", &opt.addr);
 
-    KvsServer::new(engine, listener).do_loop()
+    let thread_pool = NaiveThreadPool::new(0)?;
+    match engine {
+        EngineImpl::Kvs(k) => KvsServer::new(k, listener, thread_pool).do_loop(),
+        EngineImpl::Sled(s) => KvsServer::new(s, listener, thread_pool).do_loop(),
+    }
 }
